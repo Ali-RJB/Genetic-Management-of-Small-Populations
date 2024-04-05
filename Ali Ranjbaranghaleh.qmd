@@ -1,0 +1,430 @@
+---
+title: "Genetic Management of Small Populations (Examples-Tasks)"
+format: html
+editor: visual
+theme: 
+    light:  normal
+    dark: darkly
+toc: true
+toc-location: left
+---
+
+## Introduction
+
+These Tasks have been created by [Gabriela Cielen](https://www.researchgate.net/profile/Gabriela-Cielen "ResearchGate Profile"), MSc, PhD student (Department of Genetics and Animal Breeding - Poznan University of Life Sciences)
+
+In this webpage I am trying not only to define some definitions based on her teaching slides in "Genetic Management of Small Populations" topic but also trying to solve the tasks included in the booklet she has created for this topic.
+
+```{r}
+#| echo: false
+2 * 2
+library(tidyverse)
+library(adegenet)
+```
+
+```{css}
+#| echo: false
+body.quarto-light {
+  background-color: #F8EDE3;
+}
+body.quarto-dark {
+  background-color: #595245;
+}
+i.bi::before {
+    display: table-caption !important;
+    height: 2rem !important;
+    width: 2rem !important;
+    content: "" !important;
+    background-repeat: no-repeat !important;
+    background-size: 2rem 2rem !important;
+    position: sticky !important;
+    top: 1rem !important;
+}
+h1{
+    text-align: center;
+}
+```
+
+## Exercise1
+
+### Question
+
+In the three subpopulations were registered the following genotypes:
+
+![](2.png)
+
+![](1.png)
+
+**Calculate the Frequencies of genotypes in mentioned Population and Check which one is in the genetic Equilibrium.**
+
+### Answer
+
+**First we create the table(dataframe) based on the given data in the question:**
+
+```{r}
+AA <- c(26000, 49, 64)
+Aa <- c(18000, 42, 16)
+aa <- c(45000, 9, 1)
+Population <- c("Alpha","Beta","Gamma")
+ex1 <- data.frame(Population,AA, Aa, aa)
+ex1
+```
+
+**Then we can create (mutate) othe columns in the table to measure:**
+
+1.  Population size (Pop_size)
+
+2.  Frequency of Genotype AA (P)
+
+3.  Frequency of Genotype Aa (H)
+
+4.  Frequency of Genotype AA (Q)
+
+```{r}
+ex1 |>
+  mutate(Pop_size = AA + Aa + aa) |>
+  mutate(P = round(AA/Pop_size, 4)) |>
+  mutate(H = round(Aa/Pop_size, 4)) |>
+  mutate(Q = round(aa/Pop_size, 4))
+```
+
+**Besides that, we can go further and calculate the frequencies of Alleles:**
+
+1.  Frequency of Allele a = q
+
+2.  Frequency of Allele A = p (p = 1-q)
+
+```{r}
+ex1 |>
+  mutate(Pop_size = AA + Aa + aa) |>
+  mutate(P = round(AA/Pop_size, 4)) |>
+  mutate(H = round(Aa/Pop_size, 4)) |>
+  mutate(Q = round(aa/Pop_size, 4)) |>
+  #New coulumns (q,p,H_n)
+  mutate(q = round(Q+1/2*H, 4)) |>
+  mutate(p = round(P+1/2*H, 4)) |>
+  mutate(H_n = round(4*p^2*q^2, 4))
+```
+
+Now we can Check the equilibrium:
+
+```{r}
+ex1_modified <- ex1 |>
+                mutate(Pop_size = AA + Aa + aa) |>
+                mutate(P_obs = round(AA/Pop_size, 4)) |>
+                mutate(H_obs = round(Aa/Pop_size, 4)) |>
+                mutate(Q_obs = round(aa/Pop_size, 4)) |>
+                #New coulumns (q,p,H_n)
+                mutate(q = round(Q_obs+1/2*H_obs, 4)) |>
+                mutate(p = round(P_obs+1/2*H_obs, 4)) |>
+                mutate(H_n = round(4*p^2*q^2, 4))|>
+                #Recalculating P, H and Q with p and q to check the results are similar
+                #to first measurements:
+                mutate(Drift = sqrt((p*q)/(2*Pop_size)))|>
+                mutate(P_exp = round(p^2, 4)) |>
+                mutate(Q_exp = round(q^2, 4)) |>
+                mutate(H_exp = round(1 - P_exp - Q_exp, 4))
+ex1_modified
+```
+
+It seems populations **Beta** and **Gamma** are in **genetic Equilibrium**.
+
+## Exercise 2
+
+### Question
+
+Based on the data in exercise 1 calculate the F~IS~ , F~ST~ and F~IT~ and the genetic drift.
+
+### Answer
+
+The main steps are:
+
+![](3.png)
+
+![](4.png)
+
+![](5.png)
+
+We have done the steps until Step 3 so far and we go for **Step 4**:
+
+```{r}
+ex1_modified |>
+  mutate(F_I = (H_exp - H_obs)/H_exp)
+```
+
+**Step 5 and 6:**
+
+```{r}
+p_T <- (2*26000 + 18000 + 2*49 + 42 + 2*64 + 16)/(2*89000+2*100+2*81)
+p_T
+q_T = 1 - p_T
+q_T
+```
+
+**Step 7:**
+
+```{r}
+H_I <- (0.2022 * 89000 + 0.4200 * 100 + 0.1975 * 81) / (89000 + 100 + 81)
+H_I
+H_S <- (0.4773 * 89000 + 0.4200 * 100 + 0.1977 * 81) / (89000 + 100 + 81)
+H_S
+H_T <- 1-(p_T^2+q_T^2)
+H_T
+```
+
+**Step 8:**
+
+```{r}
+F_IS <- (H_S - H_I) / H_S
+F_IS
+F_ST <- (H_T - H_S) / H_T
+F_ST
+F_IT <- (H_T - H_I) / H_T
+F_IT
+```
+
+## Exercise 3
+
+### Question
+
+Based on the frequencies in the table below calculate HET Coefficient for each population. L1-L5 are locus 1-5 with allele frequencies.
+
+![](6.png){fig-align="center" width="369"}
+
+### Answer
+
+First we create the dataframe(table):
+
+```{r}
+Pop <- c("Blue","Red","Green")
+L1 <- c(0.1,0,0.2)
+L2 <- c(0.2,0,0.2)
+L3 <- c(0.3,0,0.2)
+L4 <- c(0.35,0.5,0.2)
+L5 <- c(0.05, 0.5,0.2)
+ex3 <- data.frame(L1,L2,L3,L4,L5, row.names = Pop)
+ex3
+```
+
+Based on the formula we create the new column:
+
+![](7.png){fig-align="center"}
+
+```{r}
+ex3 |>
+  mutate(HET = 1-(L1^2+L2^2+L3^2+L4^2+L5^2))
+```
+
+## Exercise 4
+
+### Question
+
+Based on the data in the table calculate PIC coefficient for each locus and each population.
+
+![](8.png){fig-align="center" width="329"}
+
+### Answer
+
+We set each Locus for the alleles and populations
+
+Now we can create a function to do the formula fo us:
+
+![](9.png){fig-align="center" width="678"}
+
+```{r}
+# PIC_3 stands for a function to calculate PIC when we have 3 alleles
+PIC_3 <- function(x,y,z) {
+  return(
+    1-(x^2+y^2+z^2)-(2*x^2*y^2+2*x^2*z^2+2*y^2*z^2)
+  )
+}
+# PIC_2 stands for a function to calculate PIC when we have 2 alleles
+PIC_2 <- function(x,y) {
+  return(
+    1-(x^2+y^2)-(2*x^2*y^2)
+  )
+}
+```
+
+Now we calculate PIC using our functions for each population:
+
+**Yellow:**
+
+```{r}
+PIC_3(0.86,0.12,0.02) #G1 (A,B,C)
+PIC_3(0.32,0.37, 0.31)#G2 (1,2,3)
+PIC_2(0.62,0.38)      #G3 (K,L)
+```
+
+**Orange:**
+
+```{r}
+PIC_3(0.80,0.11,0.09) #G1 (A,B,C)
+PIC_3(0.45,0.26,0.29) #G2 (1,2,3)
+PIC_2(0.46,0.54)      #G3 (K,L)
+```
+
+**Black:**
+
+```{r}
+PIC_3(0.77,0.20,0.03) #G1 (A,B,C)
+PIC_3(0.22,0.46,0.32) #G2 (1,2,3)
+PIC_2(0.33, 0.67)      #G3 (K,L)
+```
+
+## Exercise 5
+
+### Question
+
+Based on the data below calculate the genetic distances between all populations. The table shows the number of animals with each genotype.
+
+![](10.png){fig-align="center" width="302"}
+
+### Answer
+
+![](11.png){fig-align="center"}
+
+First we create our table:
+
+```{r}
+Population <- c("Brown Swiss", "Jersey", "Holstein-Friesian")
+AA <- c(50,200,100)
+Aa <- c(100,100,200)
+aa <- c(50,100,200)
+ex5 <- data.frame(Population, AA,Aa,aa)
+ex5
+```
+
+Now we calculate p and q for each sub-population:
+
+```{r}
+ex5 |>
+  mutate(q = aa/(AA+Aa+aa)+1/2*((Aa)/(AA+Aa+aa))) |>
+  mutate(p = 1-q)
+```
+
+Now we can create a function to calculate the genetic distance between 2 populations:
+
+```{r}
+Distance <- function(x,y,z,w){
+  sqrt(((x-y)^2 + (z-w)^2))
+}
+```
+
+Finally we can calculate the genetic distance using the Distance function created above between 2 populations:
+
+Brown Swiss - Jersey:
+
+```{r}
+Distance(0.500, 0.375, 0.500, 0.625)
+```
+
+Brown Swiss - Holstein Friesian
+
+```{r}
+Distance(0.500, 0.600, 0.500, 0.400)
+```
+
+Jersey - Holstein Friesian
+
+```{r}
+Distance(0.625, 0.400, 0.375, 0.600)
+```
+
+## Exercise 6
+
+### Question
+
+Based on the data below calculate the Nei's genetic distance between all populations. Table shows the alleles frequency in each locus and population.
+
+![](12.png){fig-align="center" width="562"}
+
+### Answer
+
+![](13.png){fig-align="center"}
+
+Here I have don it in excel:
+
+![](21.png){fig-align="center"}
+
+![](22.png){fig-align="center"}
+
+![](23.png){fig-align="center"}
+
+## Exercise 7
+
+### Question
+
+Based on the pedigree presented below calculate the inbreeding coefficient for the animal G, H, I, J and relationship between I-J, J-F, J-G, G-H, I-H.
+
+![](14.png){fig-align="center" width="548"}
+
+### Answer
+
+![](15.png){fig-align="center" width="630"}
+
+## Exercise 8
+
+### Question
+
+Based on the following data estimate the effective population size rate of inbreeding for each population.
+
+![](16.png){fig-align="center" width="342"}
+
+### Answer
+
+We create our table first:
+
+```{r}
+Males <- c(2541, 570, 409, 10992, 1758)
+Females <- c(2434, 787, 221, 11398, 1471)
+ex8 <- data.frame(Males, Females, row.names = c("Zatorska goose",
+                                         "Pygmy hippo",
+                                         "Persian onager",
+                                         "Siamang",
+                                         "Lion-Tailed macaque"))
+ex8
+```
+
+![](18.png){fig-align="center"}
+
+```{r}
+ex8 |>
+  mutate( DeltaF = ((1/8*Males) + (1/8*Females)))|>
+  mutate(N_e = (4*Males*Females)/(Males+Females))
+```
+
+## Exercise 9
+
+### Question
+
+In goose population were 1163 individuals noted as founders and 248 indivituals moted as ancestors. In the table below were listed inbreeding coefficients and number of males and females registered in 22 years. Based on the data in the text and in the table calculate the rate of inbreeding and effective population size for each year and bottleneck effect for this population.
+
+![](19.png){fig-align="center" width="394"}
+
+### Answer
+
+![](17.png){fig-align="center"}
+
+![](18.png){fig-align="center"}
+
+We create the table for the first step:
+
+```{r}
+Year <- c(1990,1991,1992,1993,1994,1995,1996,1997,1998,1999,2000,2001,2002,2003,2004,2007,2008,2009,2010,2011,2012,2013)
+Inbreeding_coefficient <- c(0.000,0.000,0.000,0.000,0.001,0.004,0.021,0.028,0.016,0.013,0.034,0.018,0.021,0.016,0.021,0.027,0.029,0.030,0.033,0.039,0.048,0.046)
+Males_N <- c(198,262,255,196,182,283,291,33,131,119,61,120,6,23,135,81,32,41,56,25,12,293)
+Females_N <- c(171,282,228,191,165,212,257,45,124,108,45,125,12,38,128,77,34,45,63,58,26,245)
+ex9 <- data.frame(Year, Inbreeding_coefficient, Males_N, Females_N)
+ex9
+
+```
+
+```{r}
+ex9|>
+  mutate(N_e = 4*(Males_N*Females_N)/(Males_N+Females_N))
+```
+
+I did both of the calculations also in excel and here are the answers following the formulas:
+
+![](24.png){fig-align="center"}
